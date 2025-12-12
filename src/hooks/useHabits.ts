@@ -1,0 +1,71 @@
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { api } from '@/lib/api-client';
+import type { Habit, User, HabitLogs } from '@shared/types';
+import { toast } from 'sonner';
+// --- QUERIES ---
+export const useHabits = () => {
+  return useQuery<Habit[]>({
+    queryKey: ['habits'],
+    queryFn: () => api<Habit[]>('/api/habits'),
+  });
+};
+// --- MUTATIONS ---
+interface AddHabitPayload {
+  name: string;
+  color: string;
+  owner: User | 'both';
+}
+export const useAddHabitMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation<Habit, Error, AddHabitPayload>({
+    mutationFn: (newHabit) => api<Habit>('/api/habits', {
+      method: 'POST',
+      body: JSON.stringify(newHabit),
+    }),
+    onSuccess: () => {
+      toast.success('Habit added successfully!');
+      queryClient.invalidateQueries({ queryKey: ['habits'] });
+    },
+    onError: (error) => {
+      toast.error(`Failed to add habit: ${error.message}`);
+    },
+  });
+};
+interface ToggleHabitPayload {
+  date: string; // yyyy-MM-dd
+  habitId: string;
+  user: User;
+}
+export const useToggleHabitMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation<void, Error, ToggleHabitPayload, { previousLogs?: HabitLogs; monthKey: string }>({
+    mutationFn: (payload) => api<void>('/api/completions', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+    onMutate: async (payload) => {
+      const monthKey = payload.date.slice(0, 7);
+      await queryClient.cancelQueries({ queryKey: ['logs', monthKey] });
+      const previousLogs = queryClient.getQueryData<HabitLogs>(['logs', monthKey]);
+      queryClient.setQueryData<HabitLogs>(['logs', monthKey], (old = {}) => {
+        const newLogs = JSON.parse(JSON.stringify(old)); // Deep copy
+        if (!newLogs[payload.date]) newLogs[payload.date] = {};
+        const dayLog = newLogs[payload.date];
+        if (!dayLog[payload.habitId]) dayLog[payload.habitId] = { me: false, partner: false };
+        dayLog[payload.habitId][payload.user] = !dayLog[payload.habitId][payload.user];
+        return newLogs;
+      });
+      return { previousLogs, monthKey };
+    },
+    onError: (err, newTodo, context) => {
+      toast.error(`Update failed: ${err.message}`);
+      if (context?.previousLogs && context.monthKey) {
+        queryClient.setQueryData(['logs', context.monthKey], context.previousLogs);
+      }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['logs'] });
+      queryClient.invalidateQueries({ queryKey: ['habits'] }); // Invalidate habits in case streaks are derived from them
+    },
+  });
+};
