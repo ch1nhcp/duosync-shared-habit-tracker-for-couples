@@ -38,15 +38,16 @@ interface ToggleHabitPayload {
 }
 export const useToggleHabitMutation = () => {
   const queryClient = useQueryClient();
-  return useMutation<void, Error, ToggleHabitPayload, { previousLogs?: HabitLogs }>({
+  return useMutation<void, Error, ToggleHabitPayload, { previousLogs?: HabitLogs; monthKey: string }>({
     mutationFn: (payload) => api<void>('/api/completions', {
       method: 'POST',
       body: JSON.stringify(payload),
     }),
     onMutate: async (payload) => {
-      await queryClient.cancelQueries({ queryKey: ['logs'] });
-      const previousLogs = queryClient.getQueryData<HabitLogs>(['logs']);
-      queryClient.setQueryData<HabitLogs>(['logs'], (old = {}) => {
+      const monthKey = payload.date.slice(0, 7);
+      await queryClient.cancelQueries({ queryKey: ['logs', monthKey] });
+      const previousLogs = queryClient.getQueryData<HabitLogs>(['logs', monthKey]);
+      queryClient.setQueryData<HabitLogs>(['logs', monthKey], (old = {}) => {
         const newLogs = JSON.parse(JSON.stringify(old)); // Deep copy
         if (!newLogs[payload.date]) newLogs[payload.date] = {};
         const dayLog = newLogs[payload.date];
@@ -54,12 +55,12 @@ export const useToggleHabitMutation = () => {
         dayLog[payload.habitId][payload.user] = !dayLog[payload.habitId][payload.user];
         return newLogs;
       });
-      return { previousLogs };
+      return { previousLogs, monthKey };
     },
     onError: (err, newTodo, context) => {
       toast.error(`Update failed: ${err.message}`);
-      if (context?.previousLogs) {
-        queryClient.setQueryData(['logs'], context.previousLogs);
+      if (context?.previousLogs && context.monthKey) {
+        queryClient.setQueryData(['logs', context.monthKey], context.previousLogs);
       }
     },
     onSettled: () => {
