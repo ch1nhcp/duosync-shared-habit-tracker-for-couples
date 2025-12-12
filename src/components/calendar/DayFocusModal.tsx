@@ -1,11 +1,13 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { format } from 'date-fns';
-import { Check } from 'lucide-react';
+import { Check, Loader2 } from 'lucide-react';
+import confetti from 'canvas-confetti';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import useAppStore from '@/store/useAppStore';
 import { cn } from '@/lib/utils';
-import type { User, USER_NAMES } from '@shared/types';
+import { USER_NAMES } from '@shared/types';
+import type { User } from '@shared/types';
 import { useHabits, useToggleHabitMutation } from '@/hooks/useHabits';
 import { useMonthLogs } from '@/hooks/useMonthLogs';
 export function DayFocusModal() {
@@ -28,10 +30,22 @@ export function DayFocusModal() {
     (h) => h.owner === selectedUser || h.owner === 'both'
   );
   const handleToggle = (habitId: string) => {
+    const isCompleted = dayLog[habitId]?.[selectedUser] || false;
     toggleMutation.mutate({
       date: dateKey,
       habitId,
       user: selectedUser,
+    }, {
+      onSuccess: () => {
+        if (!isCompleted) {
+          confetti({
+            particleCount: 100,
+            spread: 70,
+            origin: { y: 0.6 },
+            zIndex: 9999,
+          });
+        }
+      }
     });
   };
   return (
@@ -47,8 +61,18 @@ export function DayFocusModal() {
         </DialogHeader>
         <div className="py-4 space-y-3">
           <AnimatePresence>
+            {userHabits.length === 0 && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="text-center text-muted-foreground py-8"
+              >
+                No habits assigned to {USER_NAMES[selectedUser]}.
+              </motion.div>
+            )}
             {userHabits.map((habit, index) => {
               const isCompleted = dayLog[habit.id]?.[selectedUser] || false;
+              const isMutating = toggleMutation.isPending && toggleMutation.variables?.habitId === habit.id;
               return (
                 <motion.div
                   key={habit.id}
@@ -65,6 +89,7 @@ export function DayFocusModal() {
                     variant="ghost"
                     size="icon"
                     onClick={() => handleToggle(habit.id)}
+                    disabled={isMutating}
                     className={cn(
                       'w-8 h-8 rounded-full transition-all duration-200',
                       isCompleted
@@ -73,15 +98,21 @@ export function DayFocusModal() {
                     )}
                   >
                     <AnimatePresence mode="wait">
-                      <motion.div
-                        key={isCompleted ? 'check' : 'empty'}
-                        initial={{ scale: 0, rotate: -90 }}
-                        animate={{ scale: 1, rotate: 0 }}
-                        exit={{ scale: 0, rotate: 90 }}
-                        transition={{ duration: 0.2 }}
-                      >
-                        {isCompleted ? <Check className="w-4 h-4" /> : <div className="w-4 h-4" />}
-                      </motion.div>
+                      {isMutating ? (
+                        <motion.div key="loader" initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }}>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        </motion.div>
+                      ) : (
+                        <motion.div
+                          key={isCompleted ? 'check' : 'empty'}
+                          initial={{ scale: 0, rotate: -90 }}
+                          animate={{ scale: 1, rotate: 0 }}
+                          exit={{ scale: 0, rotate: 90 }}
+                          transition={{ duration: 0.2 }}
+                        >
+                          {isCompleted ? <Check className="w-4 h-4" /> : <div className="w-4 h-4" />}
+                        </motion.div>
+                      )}
                     </AnimatePresence>
                   </Button>
                 </motion.div>

@@ -38,7 +38,7 @@ interface ToggleHabitPayload {
 }
 export const useToggleHabitMutation = () => {
   const queryClient = useQueryClient();
-  return useMutation<void, Error, ToggleHabitPayload>({
+  return useMutation<void, Error, ToggleHabitPayload, { previousLogs?: HabitLogs }>({
     mutationFn: (payload) => api<void>('/api/completions', {
       method: 'POST',
       body: JSON.stringify(payload),
@@ -46,8 +46,8 @@ export const useToggleHabitMutation = () => {
     onMutate: async (payload) => {
       await queryClient.cancelQueries({ queryKey: ['logs'] });
       const previousLogs = queryClient.getQueryData<HabitLogs>(['logs']);
-      queryClient.setQueryData<HabitLogs>(['logs'], (old) => {
-        const newLogs = { ...old };
+      queryClient.setQueryData<HabitLogs>(['logs'], (old = {}) => {
+        const newLogs = JSON.parse(JSON.stringify(old)); // Deep copy
         if (!newLogs[payload.date]) newLogs[payload.date] = {};
         const dayLog = newLogs[payload.date];
         if (!dayLog[payload.habitId]) dayLog[payload.habitId] = { me: false, partner: false };
@@ -64,6 +64,7 @@ export const useToggleHabitMutation = () => {
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['logs'] });
+      queryClient.invalidateQueries({ queryKey: ['habits'] }); // Invalidate habits in case streaks are derived from them
     },
   });
 };

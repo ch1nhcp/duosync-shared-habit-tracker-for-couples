@@ -4,34 +4,6 @@
 import { IndexedEntity } from "./core-utils";
 import type { User_DEPRECATED, Chat, ChatMessage, Habit, HabitLogs, User, HabitTrackerState } from "@shared/types";
 import { MOCK_CHAT_MESSAGES, MOCK_CHATS, MOCK_USERS, MOCK_HABITS, MOCK_LOGS } from "@shared/mock-data";
-// USER ENTITY: one DO instance per user
-export class UserEntity extends IndexedEntity<User_DEPRECATED> {
-  static readonly entityName = "user";
-  static readonly indexName = "users";
-  static readonly initialState: User_DEPRECATED = { id: "", name: "" };
-  static seedData = MOCK_USERS;
-}
-// CHAT BOARD ENTITY: one DO instance per chat board, stores its own messages
-export type ChatBoardState = Chat & { messages: ChatMessage[] };
-const SEED_CHAT_BOARDS: ChatBoardState[] = MOCK_CHATS.map(c => ({
-  ...c,
-  messages: MOCK_CHAT_MESSAGES.filter(m => m.chatId === c.id),
-}));
-export class ChatBoardEntity extends IndexedEntity<ChatBoardState> {
-  static readonly entityName = "chat";
-  static readonly indexName = "chats";
-  static readonly initialState: ChatBoardState = { id: "", title: "", messages: [] };
-  static seedData = SEED_CHAT_BOARDS;
-  async listMessages(): Promise<ChatMessage[]> {
-    const { messages } = await this.getState();
-    return messages;
-  }
-  async sendMessage(userId: string, text: string): Promise<ChatMessage> {
-    const msg: ChatMessage = { id: crypto.randomUUID(), chatId: this.id, userId, text, ts: Date.now() };
-    await this.mutate(s => ({ ...s, messages: [...s.messages, msg] }));
-    return msg;
-  }
-}
 // HABIT TRACKER ENTITY: Singleton DO to store all habits and logs
 export class HabitTrackerEntity extends IndexedEntity<HabitTrackerState> {
   static readonly entityName = "habitTracker";
@@ -64,5 +36,34 @@ export class HabitTrackerEntity extends IndexedEntity<HabitTrackerState> {
       }
     });
     return monthLogs;
+  }
+}
+// --- DEMO ENTITIES (from template) ---
+// USER ENTITY: one DO instance per user
+export class UserEntity extends IndexedEntity<User_DEPRECATED> {
+  static readonly entityName = "user";
+  static readonly indexName = "users";
+  static readonly initialState: User_DEPRECATED = { id: "", name: "" };
+  static seedData = MOCK_USERS;
+}
+// CHAT BOARD ENTITY: one DO instance per chat board, stores its own messages
+export type ChatBoardState = Chat & { messages: ChatMessage[] };
+const SEED_CHAT_BOARDS: ChatBoardState[] = MOCK_CHATS.map(c => ({
+  ...c,
+  messages: MOCK_CHAT_MESSAGES.filter(m => m.chatId === c.id),
+}));
+export class ChatBoardEntity extends IndexedEntity<ChatBoardState> {
+  static readonly entityName = "chat";
+  static readonly indexName = "chats";
+  static readonly initialState: ChatBoardState = { id: "", title: "", messages: [] };
+  static seedData = SEED_CHAT_BOARDS;
+  async listMessages(): Promise<ChatMessage[]> {
+    const { messages } = await this.getState();
+    return messages;
+  }
+  async sendMessage(userId: string, text: string): Promise<ChatMessage> {
+    const msg: ChatMessage = { id: crypto.randomUUID(), chatId: this.id, userId, text, ts: Date.now() };
+    await this.mutate(s => ({ ...s, messages: [...s.messages, msg] }));
+    return msg;
   }
 }

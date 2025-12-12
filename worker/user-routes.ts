@@ -4,6 +4,41 @@ import { UserEntity, ChatBoardEntity, HabitTrackerEntity } from "./entities";
 import { ok, bad, notFound, isStr } from './core-utils';
 import type { User } from '@shared/types';
 export function userRoutes(app: Hono<{ Bindings: Env }>) {
+  // --- DUOSYNC ROUTES ---
+  app.get('/api/habits', async (c) => {
+    await HabitTrackerEntity.ensureSeed(c.env);
+    const tracker = new HabitTrackerEntity(c.env, 'primary');
+    const state = await tracker.getState();
+    return ok(c, state.habits);
+  });
+  app.post('/api/habits', async (c) => {
+    const { name, color, owner } = await c.req.json<{ name?: string; color?: string; owner?: User | 'both'; }>();
+    if (!isStr(name) || !isStr(color) || !owner || !['me', 'partner', 'both'].includes(owner)) {
+      return bad(c, 'name, color, and valid owner required');
+    }
+    const tracker = new HabitTrackerEntity(c.env, 'primary');
+    const habit = await tracker.addHabit(name, color, owner);
+    return ok(c, habit);
+  });
+  app.get('/api/logs', async (c) => {
+    const start = c.req.query('start');
+    const end = c.req.query('end');
+    if (!isStr(start) || !isStr(end)) return bad(c, 'start and end query params required');
+    await HabitTrackerEntity.ensureSeed(c.env);
+    const tracker = new HabitTrackerEntity(c.env, 'primary');
+    const monthLogs = await tracker.getMonthLogs(start, end);
+    return ok(c, monthLogs);
+  });
+  app.post('/api/completions', async (c) => {
+    const { date, habitId, user } = await c.req.json<{ date: string; habitId: string; user: User; }>();
+    if (!isStr(date) || !isStr(habitId) || !user || !['me', 'partner'].includes(user)) {
+      return bad(c, 'date, habitId, and valid user required');
+    }
+    const tracker = new HabitTrackerEntity(c.env, 'primary');
+    await tracker.toggleHabitCompletion(date, habitId, user);
+    return ok(c, { success: true });
+  });
+  // --- DEMO ROUTES (from template, kept for compatibility if needed) ---
   app.get('/api/test', (c) => c.json({ success: true, data: { name: 'CF Workers Demo' }}));
   // USERS
   app.get('/api/users', async (c) => {
@@ -61,39 +96,5 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     const list = ids?.filter(isStr) ?? [];
     if (list.length === 0) return bad(c, 'ids required');
     return ok(c, { deletedCount: await ChatBoardEntity.deleteMany(c.env, list), ids: list });
-  });
-  // --- DUOSYNC ROUTES ---
-  app.get('/api/habits', async (c) => {
-    await HabitTrackerEntity.ensureSeed(c.env);
-    const tracker = new HabitTrackerEntity(c.env, 'primary');
-    const state = await tracker.getState();
-    return ok(c, state.habits);
-  });
-  app.post('/api/habits', async (c) => {
-    const { name, color, owner } = await c.req.json<{ name?: string; color?: string; owner?: User | 'both'; }>();
-    if (!isStr(name) || !isStr(color) || !owner || !['me', 'partner', 'both'].includes(owner)) {
-      return bad(c, 'name, color, and valid owner required');
-    }
-    const tracker = new HabitTrackerEntity(c.env, 'primary');
-    const habit = await tracker.addHabit(name, color, owner);
-    return ok(c, habit);
-  });
-  app.get('/api/logs', async (c) => {
-    const start = c.req.query('start');
-    const end = c.req.query('end');
-    if (!isStr(start) || !isStr(end)) return bad(c, 'start and end query params required');
-    await HabitTrackerEntity.ensureSeed(c.env);
-    const tracker = new HabitTrackerEntity(c.env, 'primary');
-    const monthLogs = await tracker.getMonthLogs(start, end);
-    return ok(c, monthLogs);
-  });
-  app.post('/api/completions', async (c) => {
-    const { date, habitId, user } = await c.req.json<{ date: string; habitId: string; user: User; }>();
-    if (!isStr(date) || !isStr(habitId) || !user || !['me', 'partner'].includes(user)) {
-      return bad(c, 'date, habitId, and valid user required');
-    }
-    const tracker = new HabitTrackerEntity(c.env, 'primary');
-    await tracker.toggleHabitCompletion(date, habitId, user);
-    return ok(c, { success: true });
   });
 }

@@ -1,15 +1,5 @@
-import type { User as User_DEPRECATED, Chat, ChatMessage } from './types';
+import type { User_DEPRECATED, Chat, ChatMessage } from './types';
 import type { Habit, HabitLogs } from './types';
-export const MOCK_USERS: User_DEPRECATED[] = [
-  { id: 'u1', name: 'User A' },
-  { id: 'u2', name: 'User B' }
-];
-export const MOCK_CHATS: Chat[] = [
-  { id: 'c1', title: 'General' },
-];
-export const MOCK_CHAT_MESSAGES: ChatMessage[] = [
-  { id: 'm1', chatId: 'c1', userId: 'u1', text: 'Hello', ts: Date.now() },
-];
 // DuoSync Mock Data
 export const MOCK_HABITS: Habit[] = [
   { id: 'h1', name: 'Morning Jog', color: 'bg-sky-400', owner: 'both' },
@@ -33,3 +23,14 @@ export const MOCK_LOGS: HabitLogs = {
     h4: { me: true, partner: false },
   },
 };
+// --- DEPRECATED DEMO DATA ---
+export const MOCK_USERS: User_DEPRECATED[] = [
+  { id: 'u1', name: 'User A' },
+  { id: 'u2', name: 'User B' }
+];
+export const MOCK_CHATS: Chat[] = [
+  { id: 'c1', title: 'General' },
+];
+export const MOCK_CHAT_MESSAGES: ChatMessage[] = [
+  { id: 'm1', chatId: 'c1', userId: 'u1', text: 'Hello', ts: Date.now() },
+];
