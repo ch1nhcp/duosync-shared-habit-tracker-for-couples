@@ -1,6 +1,6 @@
 # DuoSync - Shared Habit Tracker for Couples
 
-[cloudflarebutton]
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/ch1nhcp/duosync-shared-habit-tracker-for-couples)
 
 A minimalist, shared habit tracking calendar for couples to visualize and build routines together.
 
@@ -95,7 +95,7 @@ bun run deploy
 
 This builds the frontend, bundles the Worker, and deploys both. Your app will be live at `https://<your-project>.workers.dev`.
 
-[cloudflarebutton]
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/ch1nhcp/duosync-shared-habit-tracker-for-couples)
 
 **Note**: Ensure you're logged in via `wrangler login` and have a Cloudflare account.
 
