@@ -1,11 +1,9 @@
 import { format } from 'date-fns';
 import { ChevronLeft, ChevronRight, Users } from 'lucide-react';
-import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import useAppStore from '@/store/useAppStore';
-import { cn } from '@/lib/utils';
-import { USER_NAMES } from '@/types/app';
+import { USER_NAMES } from '@shared/types';
 export function Header() {
   const currentDate = useAppStore((s) => s.currentDate);
   const selectedUser = useAppStore((s) => s.selectedUser);

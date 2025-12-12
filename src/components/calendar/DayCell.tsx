@@ -2,18 +2,21 @@ import { format, isToday } from 'date-fns';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import useAppStore from '@/store/useAppStore';
-import { Habit } from '@/types/app';
+import type { User } from '@shared/types';
+import { useHabits } from '@/hooks/useHabits';
+import { useMonthLogs } from '@/hooks/useMonthLogs';
 interface DayCellProps {
   day: Date;
   isCurrentMonth: boolean;
 }
 export function DayCell({ day, isCurrentMonth }: DayCellProps) {
   const setSelectedDate = useAppStore((s) => s.setSelectedDate);
-  const logs = useAppStore((s) => s.logs);
-  const habits = useAppStore((s) => s.habits);
+  const currentDate = useAppStore((s) => s.currentDate);
+  const { data: habits = [] } = useHabits();
+  const { data: monthLogs = {} } = useMonthLogs(currentDate);
   const dateKey = format(day, 'yyyy-MM-dd');
-  const dayLog = logs[dateKey];
-  const getCompletedHabits = (user: 'me' | 'partner') => {
+  const dayLog = monthLogs[dateKey];
+  const getCompletedHabits = (user: User) => {
     if (!dayLog) return [];
     return habits.filter(
       (habit) =>

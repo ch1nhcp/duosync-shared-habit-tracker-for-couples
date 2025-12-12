@@ -1,18 +1,21 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { format } from 'date-fns';
-import { Check, X } from 'lucide-react';
+import { Check } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import useAppStore from '@/store/useAppStore';
 import { cn } from '@/lib/utils';
-import { Habit, User, USER_NAMES } from '@/types/app';
+import type { User, USER_NAMES } from '@shared/types';
+import { useHabits, useToggleHabitMutation } from '@/hooks/useHabits';
+import { useMonthLogs } from '@/hooks/useMonthLogs';
 export function DayFocusModal() {
   const selectedDate = useAppStore((s) => s.selectedDate);
   const setSelectedDate = useAppStore((s) => s.setSelectedDate);
-  const habits = useAppStore((s) => s.habits);
-  const logs = useAppStore((s) => s.logs);
   const selectedUser = useAppStore((s) => s.selectedUser);
-  const toggleHabit = useAppStore((s) => s.toggleHabit);
+  const currentDate = useAppStore((s) => s.currentDate);
+  const { data: habits = [] } = useHabits();
+  const { data: monthLogs = {} } = useMonthLogs(currentDate);
+  const toggleMutation = useToggleHabitMutation();
   const handleOpenChange = (isOpen: boolean) => {
     if (!isOpen) {
       setSelectedDate(null);
@@ -20,10 +23,17 @@ export function DayFocusModal() {
   };
   if (!selectedDate) return null;
   const dateKey = format(selectedDate, 'yyyy-MM-dd');
-  const dayLog = logs[dateKey] || {};
+  const dayLog = monthLogs[dateKey] || {};
   const userHabits = habits.filter(
     (h) => h.owner === selectedUser || h.owner === 'both'
   );
+  const handleToggle = (habitId: string) => {
+    toggleMutation.mutate({
+      date: dateKey,
+      habitId,
+      user: selectedUser,
+    });
+  };
   return (
     <Dialog open={!!selectedDate} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-[425px] bg-background/80 backdrop-blur-sm border-border/50">
@@ -54,7 +64,7 @@ export function DayFocusModal() {
                   <Button
                     variant="ghost"
                     size="icon"
-                    onClick={() => toggleHabit(habit.id, selectedDate)}
+                    onClick={() => handleToggle(habit.id)}
                     className={cn(
                       'w-8 h-8 rounded-full transition-all duration-200',
                       isCompleted
@@ -64,7 +74,7 @@ export function DayFocusModal() {
                   >
                     <AnimatePresence mode="wait">
                       <motion.div
-                        key={isCompleted ? 'check' : 'x'}
+                        key={isCompleted ? 'check' : 'empty'}
                         initial={{ scale: 0, rotate: -90 }}
                         animate={{ scale: 1, rotate: 0 }}
                         exit={{ scale: 0, rotate: 90 }}

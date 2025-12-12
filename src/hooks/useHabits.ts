@@ -38,34 +38,32 @@ interface ToggleHabitPayload {
 }
 export const useToggleHabitMutation = () => {
   const queryClient = useQueryClient();
-  return useMutation<void, Error, ToggleHabitPayload, { previousLogs?: HabitLogs; monthKey: string }>({
+  return useMutation<void, Error, ToggleHabitPayload>({
     mutationFn: (payload) => api<void>('/api/completions', {
       method: 'POST',
       body: JSON.stringify(payload),
     }),
     onMutate: async (payload) => {
-      const monthKey = payload.date.slice(0, 7);
-      await queryClient.cancelQueries({ queryKey: ['logs', monthKey] });
-      const previousLogs = queryClient.getQueryData<HabitLogs>(['logs', monthKey]);
-      queryClient.setQueryData<HabitLogs>(['logs', monthKey], (old = {}) => {
-        const newLogs = JSON.parse(JSON.stringify(old)); // Deep copy
+      await queryClient.cancelQueries({ queryKey: ['logs'] });
+      const previousLogs = queryClient.getQueryData<HabitLogs>(['logs']);
+      queryClient.setQueryData<HabitLogs>(['logs'], (old) => {
+        const newLogs = { ...old };
         if (!newLogs[payload.date]) newLogs[payload.date] = {};
         const dayLog = newLogs[payload.date];
         if (!dayLog[payload.habitId]) dayLog[payload.habitId] = { me: false, partner: false };
         dayLog[payload.habitId][payload.user] = !dayLog[payload.habitId][payload.user];
         return newLogs;
       });
-      return { previousLogs, monthKey };
+      return { previousLogs };
     },
     onError: (err, newTodo, context) => {
       toast.error(`Update failed: ${err.message}`);
-      if (context?.previousLogs && context.monthKey) {
-        queryClient.setQueryData(['logs', context.monthKey], context.previousLogs);
+      if (context?.previousLogs) {
+        queryClient.setQueryData(['logs'], context.previousLogs);
       }
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['logs'] });
-      queryClient.invalidateQueries({ queryKey: ['habits'] }); // Invalidate habits in case streaks are derived from them
     },
   });
 };

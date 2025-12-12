@@ -1,13 +1,13 @@
 import { useState } from 'react';
-import { Plus, Palette } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { cn } from '@/lib/utils';
-import useAppStore from '@/store/useAppStore';
-import { Habit, User } from '@/types/app';
+import type { User } from '@shared/types';
+import { useHabits, useAddHabitMutation } from '@/hooks/useHabits';
 const COLOR_PALETTE = [
   'bg-sky-400', 'bg-amber-400', 'bg-violet-400', 'bg-blue-400',
   'bg-emerald-400', 'bg-rose-400', 'bg-pink-400', 'bg-indigo-400',
@@ -17,21 +17,24 @@ interface HabitDrawerProps {
   onOpenChange: (open: boolean) => void;
 }
 export function HabitDrawer({ open, onOpenChange }: HabitDrawerProps) {
-  const habits = useAppStore((s) => s.habits);
-  const addHabit = useAppStore((s) => s.addHabit);
+  const { data: habits = [] } = useHabits();
+  const addMutation = useAddHabitMutation();
   const [newHabitName, setNewHabitName] = useState('');
   const [newHabitColor, setNewHabitColor] = useState(COLOR_PALETTE[0]);
   const [newHabitOwner, setNewHabitOwner] = useState<User | 'both'>('both');
   const handleAddHabit = () => {
     if (newHabitName.trim()) {
-      addHabit({
+      addMutation.mutate({
         name: newHabitName.trim(),
         color: newHabitColor,
         owner: newHabitOwner,
+      }, {
+        onSuccess: () => {
+          setNewHabitName('');
+          setNewHabitColor(COLOR_PALETTE[0]);
+          setNewHabitOwner('both');
+        }
       });
-      setNewHabitName('');
-      setNewHabitColor(COLOR_PALETTE[0]);
-      setNewHabitOwner('both');
     }
   };
   return (
@@ -95,8 +98,8 @@ export function HabitDrawer({ open, onOpenChange }: HabitDrawerProps) {
           </div>
         </div>
         <SheetFooter>
-          <Button onClick={handleAddHabit} disabled={!newHabitName.trim()} className="w-full">
-            <Plus className="w-4 h-4 mr-2" /> Add Habit
+          <Button onClick={handleAddHabit} disabled={!newHabitName.trim() || addMutation.isPending} className="w-full">
+            <Plus className="w-4 h-4 mr-2" /> {addMutation.isPending ? 'Adding...' : 'Add Habit'}
           </Button>
         </SheetFooter>
       </SheetContent>
